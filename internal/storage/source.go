@@ -33,14 +33,49 @@ func (s *SourcePostgresStorage) SourceByID(ctx context.Context, id int64) (*mode
 		return nil, err
 	}
 	defer conn.Close()
+
+	var source dbSource
+	if err := conn.GetContext(ctx, &source, `SELECT * FROM sources WHERE id = $1`, id); err != nil {
+		return nil, err
+	}
+	return (*model.Source)(&source), nil
 }
 
 func (s *SourcePostgresStorage) Add(ctx context.Context, source model.Source) (int64, error) {
+	conn, err := s.db.Connx(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+	var id int64
 
+	row := conn.QueryRowxContext(
+		ctx,
+		`INSERT INTO sources (name, feed_url, created_at) VALUES ($1, $2, $3) RETURNING id`,
+		source.Name,
+		source.FeedURL,
+		source.CreatedAt,
+	)
+	if err := row.Err(); err != nil {
+		return 0, err
+	}
+	if err := row.Scan(&id); err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (s *SourcePostgresStorage) Delete(ctx context.Context, id int64) error {
+	conn, err := s.db.Connx(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
 
+	if _, err := conn.ExecContext(ctx, `DELETE FROM sources WHERE id = $1`, id); err != nil {
+		return err
+	}
+	return nil
 }
 
 type dbSource struct {
