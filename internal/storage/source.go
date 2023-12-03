@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+func NewSourceStorage(db *sqlx.DB) *SourcePostgresStorage {
+	return &SourcePostgresStorage{db: db}
+}
+
 type SourcePostgresStorage struct {
 	db *sqlx.DB
 }
